@@ -14,11 +14,6 @@ fun putStrLn(line: String): IO<Unit> = IO { println(line) }
 
 fun getStrLn(): IO<String> = IO { readLine() ?: throw IOException("Failed to read input!") }
 
-enum class ExitStatus(val statusCode: Int) {
-    SUCCESS(0),
-    ERROR(1)
-}
-
 object Hangman {
 
     data class State(val name: String, val guesses: Set<Char> = emptySet(), val word: String) {
@@ -37,14 +32,6 @@ object Hangman {
                 .lines()
                 .toList()
     }
-
-    fun run(): IO<ExitStatus> = hangman.attempt()
-            .map {
-                it.fold(
-                        { ExitStatus.ERROR },
-                        { ExitStatus.SUCCESS }
-                )
-            }
 
     val hangman: IO<Unit> = IO.monad().binding {
         putStrLn("Welcome to purely functional hangman").bind()
@@ -109,5 +96,5 @@ object Hangman {
 }
 
 fun main() {
-    Hangman.run().unsafeRunSync()
+    Hangman.hangman.unsafeRunSync()
 }
