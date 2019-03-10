@@ -1,11 +1,10 @@
 package io.github.lordraydenmk
 
 import arrow.effects.IO
+import arrow.effects.extensions.io.fx.fx
 import arrow.effects.fix
-import arrow.effects.instances.io.monad.monad
 import arrow.effects.liftIO
 import arrow.syntax.collections.firstOption
-import arrow.typeclasses.binding
 import java.io.IOException
 import kotlin.random.Random
 import kotlin.streams.toList
@@ -33,18 +32,18 @@ object Hangman {
                 .toList()
     }
 
-    val hangman: IO<Unit> = IO.monad().binding {
+    val hangman: IO<Unit> = fx {
         putStrLn("Welcome to purely functional hangman").bind()
-        val name = getName.bind()
+        val (name) = getName
         putStrLn("Welcome $name. Let's begin!").bind()
-        val word = chooseWord.bind()
+        val (word) = chooseWord
         val state = State(name, word = word)
         renderState(state).bind()
         gameLoop(state).bind()
         Unit
     }.fix()
 
-    fun gameLoop(state: State): IO<State> = IO.monad().binding {
+    fun gameLoop(state: State): IO<State> = fx {
         val guess = getChoice().bind()
         val updatedState = state.copy(guesses = state.guesses.plus(guess))
         renderState(updatedState).bind()
@@ -57,13 +56,13 @@ object Hangman {
         if (loop) gameLoop(updatedState).bind() else updatedState
     }.fix()
 
-    val getName: IO<String> = IO.monad().binding {
+    val getName: IO<String> = fx {
         putStrLn("What is your name: ").bind()
-        val name = getStrLn().bind()
+        val (name) = getStrLn()
         name
     }.fix()
 
-    fun getChoice(): IO<Char> = IO.monad().binding {
+    fun getChoice(): IO<Char> = fx {
         putStrLn("Please enter a letter").bind()
         val line = getStrLn().bind()
         val char = line.toLowerCase().trim().firstOption().fold(
@@ -80,7 +79,7 @@ object Hangman {
 
     fun nextInt(max: Int): IO<Int> = IO { Random.nextInt(max) }
 
-    val chooseWord: IO<String> = IO.monad().binding {
+    val chooseWord: IO<String> = fx {
         val rand = nextInt(dictionary.size).bind()
         dictionary[rand].liftIO().bind()
     }.fix()

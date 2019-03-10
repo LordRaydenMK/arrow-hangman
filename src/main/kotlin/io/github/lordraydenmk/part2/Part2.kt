@@ -2,20 +2,15 @@ package io.github.lordraydenmk.part2
 
 import arrow.Kind
 import arrow.core.toOption
-import arrow.effects.IO
-import arrow.effects.ObservableK
-import arrow.effects.SingleK
-import arrow.effects.fix
-import arrow.effects.instances.io.monadDefer.monadDefer
-import arrow.effects.observablek.monadDefer.monadDefer
-import arrow.effects.singlek.monadDefer.monadDefer
+import arrow.effects.rx2.SingleK
+import arrow.effects.rx2.extensions.singlek.monadDefer.monadDefer
+import arrow.effects.rx2.fix
 import arrow.effects.typeclasses.MonadDefer
-import arrow.typeclasses.binding
 import java.io.IOException
 import kotlin.random.Random
 import kotlin.streams.toList
 
-fun <F> MonadDefer<F>.putStrLn(line: String): Kind<F, Unit> = invoke {
+fun <F> MonadDefer<F>.putStrLn(line: String): Kind<F, Unit> = delay {
     println(line)
 }
 
@@ -83,14 +78,14 @@ class Hangman<F>(private val M: MonadDefer<F>): MonadDefer<F> by M {
                     putStrLn("Please enter a letter")
                             .flatMap { getChoice() }
                 },
-                { char ->
-                    invoke { char }
+                {
+                    char -> delay { char }
                 }
         ).bind()
         char
     }
 
-    fun nextInt(max: Int): Kind<F, Int> = invoke { Random.nextInt(max) }
+    fun nextInt(max: Int): Kind<F, Int> = delay { Random.nextInt(max) }
 
     val chooseWord: Kind<F, String> = binding {
         val rand = nextInt(dictionary.size).bind()
