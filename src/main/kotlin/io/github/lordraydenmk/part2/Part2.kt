@@ -2,15 +2,15 @@ package io.github.lordraydenmk.part2
 
 import arrow.Kind
 import arrow.core.toOption
-import arrow.effects.rx2.SingleK
-import arrow.effects.rx2.extensions.singlek.monadDefer.monadDefer
-import arrow.effects.rx2.fix
-import arrow.effects.typeclasses.MonadDefer
+import arrow.fx.rx2.SingleK
+import arrow.fx.rx2.extensions.singlek.monadDefer.monadDefer
+import arrow.fx.rx2.fix
+import arrow.fx.typeclasses.MonadDefer
 import java.io.IOException
 import kotlin.random.Random
 import kotlin.streams.toList
 
-fun <F> MonadDefer<F>.putStrLn(line: String): Kind<F, Unit> = delay {
+fun <F> MonadDefer<F>.putStrLn(line: String): Kind<F, Unit> = later {
     println(line)
 }
 
@@ -41,7 +41,7 @@ class Hangman<F>(private val M: MonadDefer<F>): MonadDefer<F> by M {
                 .toList()
     }
 
-    val hangman: Kind<F, Unit> = binding {
+    val hangman: Kind<F, Unit> = fx.monad {
         putStrLn("Welcome to purely functional hangman").bind()
         val name = getName.bind()
         putStrLn("Welcome $name. Let's begin!").bind()
@@ -52,7 +52,7 @@ class Hangman<F>(private val M: MonadDefer<F>): MonadDefer<F> by M {
         Unit
     }
 
-    fun gameLoop(state: State): Kind<F, State> = binding {
+    fun gameLoop(state: State): Kind<F, State> = fx.monad {
         val guess = getChoice().bind()
         val updatedState = state.copy(guesses = state.guesses.plus(guess))
         renderState(updatedState).bind()
@@ -65,12 +65,12 @@ class Hangman<F>(private val M: MonadDefer<F>): MonadDefer<F> by M {
         if (loop) gameLoop(updatedState).bind() else updatedState
     }
 
-    val getName: Kind<F, String> = binding {
+    val getName: Kind<F, String> = fx.monad {
         putStrLn("What is your name: ").bind()
         getStrLn().bind()
     }
 
-    fun getChoice(): Kind<F, Char> = binding {
+    fun getChoice(): Kind<F, Char> = fx.monad {
         putStrLn("Please enter a letter").bind()
         val line = getStrLn().bind()
         val char = line.toLowerCase().first().toOption().fold(
@@ -79,15 +79,15 @@ class Hangman<F>(private val M: MonadDefer<F>): MonadDefer<F> by M {
                             .flatMap { getChoice() }
                 },
                 {
-                    char -> delay { char }
+                    char -> later { char }
                 }
         ).bind()
         char
     }
 
-    fun nextInt(max: Int): Kind<F, Int> = delay { Random.nextInt(max) }
+    fun nextInt(max: Int): Kind<F, Int> = later { Random.nextInt(max) }
 
-    val chooseWord: Kind<F, String> = binding {
+    val chooseWord: Kind<F, String> = fx.monad {
         val rand = nextInt(dictionary.size).bind()
         dictionary[rand]
     }
