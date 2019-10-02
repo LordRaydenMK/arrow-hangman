@@ -1,17 +1,14 @@
 package io.github.lordraydenmk
 
-import arrow.effects.IO
-import arrow.effects.extensions.io.fx.fx
-import arrow.effects.fix
-import arrow.effects.liftIO
-import arrow.syntax.collections.firstOption
-import java.io.IOException
+import arrow.core.toOption
+import arrow.fx.IO
+import arrow.fx.extensions.fx
 import kotlin.random.Random
 import kotlin.streams.toList
 
 fun putStrLn(line: String): IO<Unit> = IO { println(line) }
 
-fun getStrLn(): IO<String> = IO { readLine() ?: throw IOException("Failed to read input!") }
+fun getStrLn(): IO<String> = IO { readLine() ?: "" }
 
 object Hangman {
 
@@ -32,7 +29,7 @@ object Hangman {
                 .toList()
     }
 
-    val hangman: IO<Unit> = fx {
+    val hangman: IO<Unit> = IO.fx {
         putStrLn("Welcome to purely functional hangman").bind()
         val (name) = getName
         putStrLn("Welcome $name. Let's begin!").bind()
@@ -41,9 +38,9 @@ object Hangman {
         renderState(state).bind()
         gameLoop(state).bind()
         Unit
-    }.fix()
+    }
 
-    fun gameLoop(state: State): IO<State> = fx {
+    fun gameLoop(state: State): IO<State> = IO.fx {
         val guess = getChoice().bind()
         val updatedState = state.copy(guesses = state.guesses.plus(guess))
         renderState(updatedState).bind()
@@ -54,35 +51,37 @@ object Hangman {
             else -> putStrLn("That's wrong, but keep trying").map { true }
         }.bind()
         if (loop) gameLoop(updatedState).bind() else updatedState
-    }.fix()
+    }
 
-    val getName: IO<String> = fx {
+    val getName: IO<String> = IO.fx {
         putStrLn("What is your name: ").bind()
         val (name) = getStrLn()
         name
-    }.fix()
+    }
 
-    fun getChoice(): IO<Char> = fx {
+    fun getChoice(): IO<Char> = IO.fx {
         putStrLn("Please enter a letter").bind()
         val line = getStrLn().bind()
-        val char = line.toLowerCase().trim().firstOption().fold(
-                {
-                    putStrLn("You did not enter a character")
-                            .flatMap { getChoice() }
-                },
-                {
-                    IO.just(it)
-                }
-        ).bind()
+        val char = line.toLowerCase()
+                .trim()
+                .firstOrNull()
+                .toOption()
+                .fold(
+                        {
+                            putStrLn("You did not enter a character")
+                                    .flatMap { getChoice() }
+                        },
+                        { IO.just(it) }
+                ).bind()
         char
-    }.fix()
+    }
 
     fun nextInt(max: Int): IO<Int> = IO { Random.nextInt(max) }
 
-    val chooseWord: IO<String> = fx {
+    val chooseWord: IO<String> = IO.fx {
         val rand = nextInt(dictionary.size).bind()
-        dictionary[rand].liftIO().bind()
-    }.fix()
+        IO { dictionary[rand] }.bind()
+    }
 
     fun renderState(state: State): IO<Unit> {
         val word = state.word.toList().map { if (state.guesses.contains(it)) " $it " else "   " }
